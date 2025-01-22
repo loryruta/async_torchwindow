@@ -1,0 +1,13 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "async_torchwindow"
+version = "1.0.0"
+authors = [{ name = "Lorenzo Rutayisire" }]
+requires-python = ">=3.11"
+
+[tool.scikit-build]
+wheel.expand-macos-universal-tags = true
+minimum-version = "build-system.requires"

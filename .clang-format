@@ -1,0 +1,15 @@
+Language: Cpp
+UseTab: Never
+IndentWidth: 4
+ColumnLimit: 120
+BreakBeforeBraces: Linux
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+AlignAfterOpenBracket: Align
+BinPackArguments: false
+BinPackParameters: false
+AccessModifierOffset: -4
+BreakTemplateDeclarations: Yes
+PointerAlignment: Left
+SpaceAfterCStyleCast: true
+---

@@ -1,0 +1,7 @@
+.vscode
+
+/_skbuild
+/build
+/dist
+
+*.egg-info
