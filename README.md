@@ -7,21 +7,32 @@ Shortly, it opens a window that allows you to visualize an image tensor.
 
 - **No download to host memory**
 
-  Many visualization libraries require image data to be on host before it can be visualized. However, in many applications images are device tensors and download image to host memory introduces latency, hindering real-time visualization.
+  Many visualization libraries require image data to be on host before visualization. However, in many applications images are **device** tensors and downloading such tensors to host memory introduces latency, hindering real-time visualization.
 
 - **No GIL lock**
 
-  Differently from the cited alternatives, `async_torchwindow` allows to start the window asynchronously w.r.t. the caller thread (a Python thread). The callee thread is started from native code and thus won't interfere with GIL lock allowing Python to perform parallel tasks at full speed.
+  Differently from the cited alternatives, `async_torchwindow` allows to start the window asynchronously w.r.t. the caller thread (a Python thread). The callee thread is started from native code and thus won't interfere with the GIL lock, allowing Python to perform parallel tasks at full speed.
 
-> ***NOTE:** This library was developed quickly (in 1 day) for personal use and thus it lacks proper testing. If found to be useful, issues and PRs are warmly welcomed.*
+> ***NOTE:** This library was developed quickly (1 day) for personal use and, as such, lacks proper testing.
+> If found useful, issues and PRs are warmly welcomed.*
 
 Tested on:
 - Ubuntu 22.04
-- Python 3.11
-- CUDA 12.4
-- PyTorch 2.5.1
 
-## Installation
+## Build and Install
+
+#### Dependencies
+
+Would be great if your environment (virtualenv or conda) satisfies the following dependencies:
+
+- Python >=3.11
+- CUDA >=12.4
+- PyTorch >=2.5
+- scikit_build_core >=0.10
+
+These are the versions with which I've developed the library, could possibly work with lower versions (not tested).
+
+#### Clone, Build & Install
 
 ```
 git submodule add https://github.com/loryruta/async_torchwindow
