@@ -40,8 +40,6 @@ Window::Window(int width, int height, const char* title)
     if (!m_window) {
         throw std::runtime_error("Failed to create GLFW window");
     }
-
-    glfwSetWindowUserPointer(m_window, this);
 }
 
 Window::~Window()

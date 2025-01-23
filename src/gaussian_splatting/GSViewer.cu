@@ -29,10 +29,37 @@ GSViewer::GSViewer(Window* window) : Viewer(ViewerType::GAUSSIAN_SPLATTING), m_w
 
     // Init screenbuffer (colorbuffer) to the initial window size
     resize_screenbuffers(width, height);
+
+    // Register window listeners
+    GLFWwindow* w_handle = window->handle();
+    void* listener = glfwGetWindowUserPointer(w_handle);
+    if (listener) throw std::runtime_error("Window already has a listener");
+    glfwSetWindowUserPointer(w_handle, this);
+    glfwSetMouseButtonCallback(w_handle, [](GLFWwindow* w_handle, int button, int action, int mods) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            glfwSetInputMode(w_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    });
+    glfwSetKeyCallback(w_handle, [](GLFWwindow* w_handle, int key, int scancode, int action, int mods) {
+        if (glfwGetInputMode(w_handle, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) {
+            return;
+        }
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+            glfwSetInputMode(w_handle, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    });
 }
 
 GSViewer::~GSViewer()
 {
+    LOG("Destroying GSViewer");
+
+    // Unregister window listeners
+    GLFWwindow* w_handle = m_window->handle();
+    glfwSetMouseButtonCallback(w_handle, nullptr);
+    glfwSetKeyCallback(w_handle, nullptr);
+    glfwSetWindowUserPointer(w_handle, nullptr);
+
     m_geometry_buffer.destroy();
     m_binning_buffer.destroy();
     m_image_buffer.destroy();
@@ -81,44 +108,49 @@ void GSViewer::update(float dt)
     static const float k_camera_speed = 1.0f;
     static const float k_camera_sensitivity = 0.1f;
 
-    bool do_update = false;
+    /* Handle camera input */
+    do {
+        if (glfwGetInputMode(m_window->handle(), GLFW_CURSOR) != GLFW_CURSOR_DISABLED) break;
 
-    // Handle camera movement
-    glm::vec3 dir{};
-    if (m_window->get_key(GLFW_KEY_W)) dir += m_camera.forward();
-    if (m_window->get_key(GLFW_KEY_S)) dir -= m_camera.forward();
-    if (m_window->get_key(GLFW_KEY_A)) dir -= m_camera.right();
-    if (m_window->get_key(GLFW_KEY_D)) dir += m_camera.right();
-    if (m_window->get_key(GLFW_KEY_SPACE)) dir += m_camera.up();
-    if (m_window->get_key(GLFW_KEY_LEFT_SHIFT)) dir -= m_camera.up();
-    if (dir != glm::vec3(0)) {
-        m_camera.position += glm::normalize(dir) * k_camera_speed * dt;
-        do_update = true;
-    }
+        bool do_update = false;
 
-    // Handle camera rotation
-    auto [cur_x, cur_y] = m_window->get_cursor_pos();
-    if (m_last_cursor_pos) {
-        float cur_dx = (float) (cur_x - m_last_cursor_pos->x);
-        float cur_dy = (float) (cur_y - m_last_cursor_pos->y);
-        // Rotate yaw
-        if (cur_dx > 0) {
-            m_camera.rotation =
-                glm::rotate(glm::mat4(m_camera.rotation), cur_dx * k_camera_sensitivity * dt, m_camera.up());
+        // Handle camera movement
+        float speed = k_camera_speed;
+        glm::vec3 dir{};
+        if (m_window->get_key(GLFW_KEY_W)) dir += m_camera.forward();
+        if (m_window->get_key(GLFW_KEY_S)) dir -= m_camera.forward();
+        if (m_window->get_key(GLFW_KEY_A)) dir -= m_camera.right();
+        if (m_window->get_key(GLFW_KEY_D)) dir += m_camera.right();
+        if (m_window->get_key(GLFW_KEY_SPACE)) dir -= m_camera.up(); // Y negative
+        if (m_window->get_key(GLFW_KEY_LEFT_SHIFT)) dir += m_camera.up();
+        if (m_window->get_key(GLFW_KEY_LEFT_CONTROL)) speed *= 10.0f;
+        if (dir != glm::vec3(0)) {
+            m_camera.position += glm::normalize(dir) * speed * dt;
             do_update = true;
         }
-        // Rotate pitch
-        if (cur_dy > 0) {
-            m_camera.rotation =
-                glm::rotate(glm::mat4(m_camera.rotation), cur_dy * k_camera_sensitivity * dt, m_camera.right());
-            do_update = true;
-        }
-    }
-    m_last_cursor_pos = {cur_x, cur_y};
 
-    if (do_update) {
-        m_camera.update();
-    }
+        // Handle camera rotation
+        auto [cur_x, cur_y] = m_window->get_cursor_pos();
+        if (m_last_cursor_pos) {
+            float cur_dx = (float) (cur_x - m_last_cursor_pos->x);
+            float cur_dy = (float) (cur_y - m_last_cursor_pos->y);
+            // Rotate yaw
+            if (cur_dx != 0) {
+                m_camera.yaw += cur_dx * k_camera_sensitivity * dt;
+                do_update = true;
+            }
+            // Rotate pitch
+            if (cur_dy != 0) {
+                m_camera.pitch += cur_dy * k_camera_sensitivity * dt;
+                do_update = true;
+            }
+        }
+        m_last_cursor_pos = {cur_x, cur_y};
+
+        if (do_update) {
+            m_camera.update();
+        }
+    } while (false);
 }
 
 Colorbuffer GSViewer::render()

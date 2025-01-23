@@ -40,6 +40,9 @@ struct Camera {
     float z_near = 0.01f;
     float z_far = 1000.0f;
 
+    /* Computed variables */
+    glm::mat4 Rt{};
+
     /* GPU data */
     float* campos_d = nullptr;     ///< Camera position on GPU
     float* viewmatrix_d = nullptr; ///< View matrix on GPU
@@ -56,15 +59,17 @@ struct Camera {
 
     ~Camera() = default;
 
-    glm::vec3 right() const { return glm::normalize(rotation[0]); }
-    glm::vec3 up() const { return glm::normalize(rotation[1]); }
-    glm::vec3 forward() const { return glm::normalize(rotation[2]); }
+    glm::vec3 right() const { return glm::normalize(Rt[0]); }
+    glm::vec3 up() const { return glm::normalize(Rt[1]); }
+    glm::vec3 forward() const { return glm::normalize(Rt[2]); }
 
     void update()
     {
         // View matrix
-        glm::mat4 Rt = rotation;
-        Rt[3] = glm::vec4(position, 1.0f);
+        Rt = glm::identity<glm::mat4>();
+        Rt = glm::rotate(Rt, yaw, glm::vec3(0, 1, 0));
+        Rt = glm::rotate(Rt, -pitch, glm::vec3(1, 0, 0));
+        Rt[3] = glm::vec4(position, 1);
         glm::mat4 view_matrix = glm::inverse(Rt);
 
         // Projection matrix
