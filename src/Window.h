@@ -8,13 +8,11 @@
 #include <GLFW/glfw3.h>
 // clang-format on
 
-#define CHECK_CUDA(_error) check_cuda(_error, __FILE__, __LINE__)
-#define LOG(format, ...) printf("%s" format, "[async_torchwindow] ", ##__VA_ARGS__)
+#include "Viewer.h"
+#include "utils.h"
 
 namespace async_torchwindow
 {
-void check_cuda(cudaError_t error, const char* file, int line);
-
 class Window
 {
 private:
@@ -31,10 +29,8 @@ private:
     int m_screenbuffer_w = -1;
     int m_screenbuffer_h = -1;
 
-    /* User-provided tensor */
-    int m_user_image_w = -1;
-    int m_user_image_h = -1;
-    const void* m_user_image_d = nullptr;
+    /* Viewer */
+    std::unique_ptr<Viewer> m_viewer;
 
     std::unique_ptr<std::thread> m_loop_thread;
     std::mutex m_user_image_mutex;
@@ -49,28 +45,35 @@ public:
 
     std::pair<int, int> get_size();
 
-    double get_fps() const { return m_fps; }
+    [[nodiscard]] double get_fps() const { return m_fps; }
 
-    void set_title(const char* title);
+    [[nodiscard]] int get_key(int key) const;
+    [[nodiscard]] std::pair<double, double> get_cursor_pos() const;
 
-    int get_key(int key) const;
-    std::pair<double, double> get_cursor_pos() const;
-
-    int get_cursor_mode() const;
+    [[nodiscard]] int get_cursor_mode() const;
     void set_cursor_mode(int mode);
 
     /// A function to let the user set an image to be displayed on the window.
     /// The image memory layout is expected to be (H, W, 4), and 32-bit floating per channel ranged [0, 1].
     ///
-    /// @param image_width         The width of the image in pixels
-    /// @param image_height        The height of the image in pixels
-    /// @param image_data_cuda_ptr Image data on device memory
-    void set_image(int image_width, int image_height, const void* image_data_cuda_ptr);
+    /// @param image_width  The width of the image in pixels
+    /// @param image_height The height of the image in pixels
+    /// @param image_data_d Image data on device memory
+    void set_image(int width, int height, float* data_d);
+
+    void set_gaussian_splatting_scene(int P,
+                                      float* background_d,
+                                      float* means3d_d,
+                                      float* shs_d,
+                                      int sh_degree,
+                                      int M,
+                                      float* opacity_d,
+                                      float* scales_d,
+                                      float* rotations_d);
 
     /// Start the window rendering/event loop.
     void start(bool blocking = true);
     bool is_running() const;
-    void close();
 
     void destroy();
 

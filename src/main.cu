@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "lib.h"
+#include "Window.h"
 
 using namespace async_torchwindow;
 
@@ -49,16 +49,18 @@ int main(int argc, char* argv[])
     float* image_d;
     CHECK_CUDA(cudaMalloc(&image_d, image_w * image_h * 4 * sizeof(float)));
 
-    window.set_image(image_w, image_h, image_d);
+    //window.set_image(image_w, image_h, image_d);
 
     window.start(false /* blocking */);
 
     while (window.is_running()) {
-        auto [cur_pos_x, cur_pos_y] = window.get_cursor_pos();
+        //auto [cur_pos_x, cur_pos_y] = window.get_cursor_pos();
         // LOG("Cursor: %.2f, %.2f\n", cur_pos_x, cur_pos_y);
 
         double t = glfwGetTime();
         fill_image_creatively(image_w, image_h, image_d, float(t));
+        CHECK_CUDA(cudaDeviceSynchronize()); // Needed to avoid queuing too many operations on device
+        // TODO modify the image on a separate CUDA stream?
     }
 
     window.destroy();

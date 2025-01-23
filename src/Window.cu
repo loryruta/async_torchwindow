@@ -1,4 +1,4 @@
-#include "lib.h"
+#include "Window.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -11,18 +11,15 @@
 // clang-format on
 #include <cuda_gl_interop.h>
 
+#include "utils.h"
+
+/* Viewers */
+#include "gaussian_splatting/GSViewer.h"
+#include "image/ImageViewer.h"
+
 using namespace async_torchwindow;
 
 static int g_num_window_alive = 0;
-
-void async_torchwindow::check_cuda(cudaError_t error, char const* file, int line)
-{
-    if (error != cudaSuccess) {
-        const char* cuda_error = cudaGetErrorString(error);
-        LOG("CUDA error: %s (%s:%d)", cuda_error, file, line);
-        throw std::runtime_error(cuda_error);
-    }
-}
 
 Window::Window(int width, int height, const char* title)
 {
@@ -61,8 +58,6 @@ std::pair<int, int> Window::get_size()
     return {width, height};
 }
 
-void Window::set_title(const char* title) { glfwSetWindowTitle(m_window, title); }
-
 int Window::get_key(int key) const { return glfwGetKey(m_window, key); }
 
 std::pair<double, double> Window::get_cursor_pos() const
@@ -76,12 +71,12 @@ int Window::get_cursor_mode() const { return glfwGetInputMode(m_window, GLFW_CUR
 
 void Window::set_cursor_mode(int value) { glfwSetInputMode(m_window, GLFW_CURSOR, value); }
 
-void Window::set_image(int image_width, int image_height, const void* image_data_d)
+void Window::set_image(int width, int height, float* data_d)
 {
-    std::lock_guard<std::mutex> lock(m_user_image_mutex);
-    m_user_image_w = image_width;
-    m_user_image_h = image_height;
-    m_user_image_d = image_data_d;
+    if (!m_viewer || m_viewer->type != ViewerType::IMAGE) {
+        m_viewer = std::unique_ptr<Viewer>(new ImageViewer);
+    }
+    dynamic_cast<ImageViewer*>(m_viewer.get())->set_image(width, height, data_d);
 }
 
 void Window::set_gaussian_splatting_scene(int P,
@@ -94,6 +89,11 @@ void Window::set_gaussian_splatting_scene(int P,
                                           float* scales_d,
                                           float* rotations_d)
 {
+    if (!m_viewer || m_viewer->type != ViewerType::GAUSSIAN_SPLATTING) {
+        m_viewer = std::unique_ptr<Viewer>(new GSViewer(this));
+    }
+    dynamic_cast<GSViewer*>(m_viewer.get())
+        ->set_scene(P, background_d, means3d_d, shs_d, sh_degree, M, opacity_d, scales_d, rotations_d);
 }
 
 void Window::start0()
@@ -109,13 +109,15 @@ void Window::start0()
     // Setup screenquad renderer
     setup_gl();
 
-    // Initialize screenbuffers
+    // Init screenbuffers
     auto [width, height] = get_size();
     resize_screenbuffers(width, height);
 
-    // Rendering/event loop
+    /* Window loop */
     int frame_counter = 0;
     double fps_last_t = 0.0;
+    double last_frame_t = -1.0;
+
     while (m_running) {
         // FPS
         ++frame_counter;
@@ -127,8 +129,34 @@ void Window::start0()
             fps_last_t = fps_t;
         }
 
+        // Update window title
+        char title[256];
+        if (!m_viewer) {
+            snprintf(title, sizeof(title), "Empty| FPS: %.1f", m_fps);
+        } else {
+            switch (m_viewer->type) {
+            case IMAGE:
+                snprintf(title, sizeof(title), "Image| FPS: %.1f", m_fps);
+                break;
+            case GAUSSIAN_SPLATTING:
+                snprintf(title, sizeof(title), "Gaussian Splatting| FPS: %.1f", m_fps);
+                break;
+            default:
+                throw std::runtime_error("Unknown viewer type");
+            }
+        }
+        glfwSetWindowTitle(m_window, title);
+
+        // Update
+        double t = glfwGetTime();
+        double dt = last_frame_t >= 0.0 ? t - last_frame_t : 0.0f;
+        last_frame_t = t;
+        if (m_viewer) m_viewer->update(float(dt));
+
+        // Render
         render();
 
+        //
         glfwSwapBuffers(m_window);
         glfwPollEvents();
 
@@ -280,28 +308,24 @@ void Window::resize_screenbuffers(int width, int height)
 
 void Window::render()
 {
-    if (m_user_image_d) {
-        int user_image_w;
-        int user_image_h;
-        const void* user_image_d;
-        // Thread-safe access to user set data
-        {
-            std::lock_guard<std::mutex> lock(m_user_image_mutex);
-            user_image_w = m_user_image_w;
-            user_image_h = m_user_image_h;
-            user_image_d = m_user_image_d;
-        }
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    do {
+        if (!m_viewer) break;
+        Colorbuffer colorbuffer = m_viewer->render();
+        if (colorbuffer.is_invalid()) break;
 
         // If the texture is smaller than the image tensor, crop the
         // tensor to fit the texture.
-        int copy_region_w = min(user_image_w, m_screenbuffer_w);
-        int copy_region_h = min(user_image_h, m_screenbuffer_h);
+        int copy_region_w = std::min(colorbuffer.width, m_screenbuffer_w);
+        int copy_region_h = std::min(colorbuffer.height, m_screenbuffer_h);
 
         // Copy tensor data to screen texture
         CHECK_CUDA(cudaMemcpy2DToArray(m_screen_array,
                                        0, // wOffset
                                        0, // hOffset
-                                       user_image_d,
+                                       colorbuffer.data_d,
                                        copy_region_w * 4 * sizeof(float), // spitch (tightly packed)
                                        copy_region_w * 4 * sizeof(float), // width
                                        copy_region_h,
@@ -314,31 +338,5 @@ void Window::render()
         glBindVertexArray(m_vao);
         glBindTexture(GL_TEXTURE_2D, m_screen_texture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-    } else {
-        // No tensor to draw, display a blue image
-        glClearColor(0, 1, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
+    } while (false);
 }
-
-#ifdef PYTHON_BINDINGS
-PYBIND11_MODULE(_async_torchwindow, m)
-{
-    py::class_<Window>(m, "Window")
-        .def(py::init<int, int, const char*>())
-        .def("get_size", &Window::get_size)
-        .def("get_fps", &Window::get_fps)
-        .def("set_title", &Window::set_title)
-        .def("get_key", &Window::get_key)
-        .def("get_cursor_pos", &Window::get_cursor_pos)
-        .def("get_cursor_mode", &Window::get_cursor_mode)
-        .def("set_cursor_mode", &Window::set_cursor_mode)
-        .def("set_image",
-             [](Window& window, int image_width, int image_height, uintptr_t image_data_d) {
-                 window.set_image(image_width, image_height, (const void*) image_data_d);
-             })
-        .def("start", &Window::start)
-        .def("is_running", &Window::is_running)
-        .def("destroy", &Window::destroy);
-}
-#endif
