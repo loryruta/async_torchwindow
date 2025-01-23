@@ -1,7 +1,9 @@
+.idea
 .vscode
 
 /_skbuild
 /build
+/cmake-build-*
 /dist
 
 *.egg-info
