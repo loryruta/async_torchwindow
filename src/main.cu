@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
         double t = glfwGetTime();
         fill_image_creatively(image_w, image_h, image_d, float(t));
-        CHECK_CUDA(cudaDeviceSynchronize()); // Needed to avoid queuing too many operations on device
+        CHECK_CUDA(cudaStreamSynchronize()); // Needed to avoid queuing too many operations on device
         // TODO modify the image on a separate CUDA stream?
     }
 

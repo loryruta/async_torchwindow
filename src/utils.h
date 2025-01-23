@@ -15,4 +15,34 @@ inline void check_cuda(cudaError_t error, char const* file, int line)
         throw std::runtime_error(cuda_error);
     }
 }
+
+struct Buffer {
+    const char* const name; // For debugging
+    void* data_d = nullptr;
+    size_t size = 0;
+
+    explicit Buffer(const char* name) : name(name) {}
+    ~Buffer() = default;
+
+    inline void resize(size_t new_size)
+    {
+        if (!data_d || size < new_size) {
+            LOG("Resizing CUDA buffer \"%s\" from %zu to %zu bytes\n", name, size, new_size);
+            void* new_data_d;
+            CHECK_CUDA(cudaMalloc(&new_data_d, new_size));
+            CHECK_CUDA(cudaMemcpy(new_data_d, data_d, size, cudaMemcpyDeviceToDevice));
+            size = new_size;
+            if (data_d) CHECK_CUDA(cudaFree(data_d));
+            data_d = new_data_d;
+        }
+    }
+
+    inline void destroy()
+    {
+        if (data_d) {
+            CHECK_CUDA(cudaFree(data_d));
+            data_d = nullptr;
+        }
+    }
+};
 } // namespace async_torchwindow

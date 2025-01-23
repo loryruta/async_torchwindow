@@ -369,8 +369,10 @@ renderCUDA(
 		final_T[pix_id] = T;
 		n_contrib[pix_id] = last_contributor;
 
-		for (int ch = 0; ch < CHANNELS; ch++)
-			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
+		out_color[pix_id * 4 + 0] = C[0] + T * bg_color[0];
+		out_color[pix_id * 4 + 1] = C[1] + T * bg_color[1];
+		out_color[pix_id * 4 + 2] = C[2] + T * bg_color[2];
+		out_color[pix_id * 4 + 3] = 1.0f; // Alpha
 	}
 }
 

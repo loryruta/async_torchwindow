@@ -43,6 +43,8 @@ public:
     Window(int width, int height, const char* title);
     ~Window();
 
+    [[nodiscard]] GLFWwindow* handle() const { return m_window; }
+
     std::pair<int, int> get_size();
 
     [[nodiscard]] double get_fps() const { return m_fps; }

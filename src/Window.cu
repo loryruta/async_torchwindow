@@ -47,7 +47,10 @@ Window::Window(int width, int height, const char* title)
 Window::~Window()
 {
     if (m_destroyed) return;
-
+ 
+    // Destroy the viewer if any
+    if (m_viewer) m_viewer.reset();
+    
     destroy();
 }
 
@@ -234,6 +237,7 @@ void Window::setup_gl()
 
             vec2 position = k_texcoords[gl_VertexID];
             position = position * 2.0 - 1.0;
+            position.y = -position.y;
             gl_Position = vec4(position, 0.0, 1.0);
 
             v_texcoord = k_texcoords[gl_VertexID];
@@ -330,7 +334,7 @@ void Window::render()
                                        copy_region_w * 4 * sizeof(float), // width
                                        copy_region_h,
                                        cudaMemcpyDeviceToDevice));
-        CHECK_CUDA(cudaDeviceSynchronize());
+        CHECK_CUDA(cudaStreamSynchronize(cudaStreamPerThread));
 
         // Draw texture to screen
         glUseProgram(m_screenquad_program);

@@ -1,6 +1,7 @@
 #include "GSViewer.h"
 
-#include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
 
 #include "rasterizer/rasterizer.h"
 
@@ -10,42 +11,32 @@ using namespace async_torchwindow;
 
 namespace
 {
-std::function<char*(size_t N)> resize_functional(GSViewer::Buffer& buffer)
+template <typename T> std::function<char*(size_t N)> resize_functional(Buffer& buffer)
 {
     return [&buffer](size_t N) -> char* {
-        if (!buffer.data_d || buffer.N < N) {
-            if (buffer.data_d) {
-                CHECK_CUDA(cudaFree(buffer.data_d));
-            }
-            CHECK_CUDA(cudaMalloc(&buffer.data_d, N * sizeof(float)));
-            // TODO Copy old memory to the new buffer
-        }
+        buffer.resize(N * sizeof(T));
         return reinterpret_cast<char*>(buffer.data_d);
     };
 };
 } // namespace
 
-GSViewer::Buffer::~Buffer()
-{
-    if (data_d) {
-        CHECK_CUDA(cudaFree(data_d));
-        data_d = nullptr;
-    }
-}
-
 GSViewer::GSViewer(Window* window) : Viewer(ViewerType::GAUSSIAN_SPLATTING), m_window(window)
 {
     auto [width, height] = window->get_size();
-
     m_camera.width = width;
-    m_camera.height = height;
+    m_camera.height = height; // TODO resize fx and fy as well
     m_camera.update();
 
     // Init screenbuffer (colorbuffer) to the initial window size
     resize_screenbuffers(width, height);
 }
 
-GSViewer::~GSViewer() {}
+GSViewer::~GSViewer()
+{
+    m_geometry_buffer.destroy();
+    m_binning_buffer.destroy();
+    m_image_buffer.destroy();
+}
 
 void GSViewer::resize_screenbuffers(int width, int height)
 {
@@ -123,6 +114,7 @@ void GSViewer::update(float dt)
             do_update = true;
         }
     }
+    m_last_cursor_pos = {cur_x, cur_y};
 
     if (do_update) {
         m_camera.update();
@@ -147,9 +139,9 @@ Colorbuffer GSViewer::render()
 
     // clang-format off
     CudaRasterizer::Rasterizer::forward(
-        resize_functional(m_geometry_buffer),
-        resize_functional(m_binning_buffer),
-        resize_functional(m_image_buffer),
+        resize_functional<char>(m_geometry_buffer),
+        resize_functional<char>(m_binning_buffer),
+        resize_functional<char>(m_image_buffer),
         P,
         scene.sh_degree,
         scene.M,

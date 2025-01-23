@@ -15,23 +15,15 @@ class Window;
 
 class GSViewer : public Viewer
 {
-public:
-    struct Buffer {
-        void* data_d = nullptr;
-        size_t N = 0;
-
-        ~Buffer();
-    };
-
 private:
     Window* m_window;
 
     Camera m_camera;
 
     /* Render buffers */
-    Buffer m_geometry_buffer{};
-    Buffer m_binning_buffer{};
-    Buffer m_image_buffer{};
+    Buffer m_geometry_buffer{"geometryBuffer"};
+    Buffer m_binning_buffer{"binningBuffer"};
+    Buffer m_image_buffer{"imageBuffer"};
 
     /* Gaussian Splatting scene */
     struct Scene {
