@@ -64,33 +64,17 @@ print("Loading the scene...")
     "/home/loryruta/projects/3dgs-stereo/data/scenes/train"
 )
 
-window = Window(W, H, "IGNORED TITLE")
-window.start(False)  # Spawn an async window
+window = Window(W, H)
+window.start()
 
 # Set the Gaussian Splatting scene
-P = means3d.shape[0]
-M = shs.shape[1]
-
-background = torch.tensor([0, 0, 0], dtype=torch.float32).cuda()
-
-# VAlidate scene tensors before passing them to the window.
-assert background.is_contiguous() and background.is_cuda
-assert means3d.is_contiguous() and means3d.is_cuda
-assert shs.is_contiguous() and shs.is_cuda
-assert opacity.is_contiguous() and opacity.is_cuda
-assert scales.is_contiguous() and scales.is_cuda
-assert rotations.is_contiguous() and rotations.is_cuda
-
 window.set_gaussian_splatting_scene(
-    P,  # P
-    background.data_ptr(),
-    means3d.data_ptr(),
-    shs.data_ptr(),
-    3,  # sh_degree
-    M,  # M
-    opacity.data_ptr(),
-    scales.data_ptr(),
-    rotations.data_ptr(),
+    torch.tensor([0, 0, 0], dtype=torch.float32),
+    means3d,
+    shs,
+    opacity,
+    scales,
+    rotations,
 )
 
 try:
