@@ -24,17 +24,22 @@ struct Buffer {
     explicit Buffer(const char* name) : name(name) {}
     ~Buffer() = default;
 
-    inline void resize(size_t new_size)
+    inline bool resize(size_t new_size)
     {
         if (!data_d || size < new_size) {
             LOG("Resizing CUDA buffer \"%s\" from %zu to %zu bytes\n", name, size, new_size);
             void* new_data_d;
-            CHECK_CUDA(cudaMalloc(&new_data_d, new_size));
+            cudaError_t error = cudaMalloc(&new_data_d, new_size);
+            if (error == cudaErrorMemoryAllocation) {
+                LOG("[WARNING] Can't allocate %zu bytes of memory (out of memory)\n", new_size);
+                return false;
+            }
             CHECK_CUDA(cudaMemcpy(new_data_d, data_d, size, cudaMemcpyDeviceToDevice));
             size = new_size;
             if (data_d) CHECK_CUDA(cudaFree(data_d));
             data_d = new_data_d;
         }
+        return true;
     }
 
     inline void destroy()

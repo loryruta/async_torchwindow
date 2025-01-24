@@ -14,8 +14,12 @@ namespace
 template <typename T> std::function<char*(size_t N)> resize_functional(Buffer& buffer)
 {
     return [&buffer](size_t N) -> char* {
-        buffer.resize(N * sizeof(T));
-        return reinterpret_cast<char*>(buffer.data_d);
+        bool resized = buffer.resize(N * sizeof(T));
+        if (resized) {
+            return reinterpret_cast<char*>(buffer.data_d);
+        } else {
+            return nullptr;
+        }
     };
 };
 } // namespace
@@ -170,7 +174,7 @@ Colorbuffer GSViewer::render()
     if (P == 0) return Colorbuffer{}; // Invalid
 
     // clang-format off
-    CudaRasterizer::Rasterizer::forward(
+    int result = CudaRasterizer::Rasterizer::forward(
         resize_functional<char>(m_geometry_buffer),
         resize_functional<char>(m_binning_buffer),
         resize_functional<char>(m_image_buffer),
@@ -199,6 +203,9 @@ Colorbuffer GSViewer::render()
         false // debug
     );
     // clang-format on
+
+    // An error occurred during forward (e.g. Out of memory)
+    if (result < 0) return Colorbuffer{};
 
     return m_colorbuffer;
 }
