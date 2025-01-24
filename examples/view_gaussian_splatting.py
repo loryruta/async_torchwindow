@@ -80,9 +80,7 @@ window.set_gaussian_splatting_scene(
 try:
     while window.is_running():
         shs[:, :, 0] = math.sin(time()) * 0.5 + 0.5
-        sleep(0.001)
-        # Possibly do something at full speed (e.g. training the Gaussian Splatting model)
-        pass
+        sleep(0.001)  # Needed to avoid overloading the device :(
 except KeyboardInterrupt:
     pass
 
