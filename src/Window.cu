@@ -21,7 +21,7 @@ using namespace async_torchwindow;
 
 static int g_num_window_alive = 0;
 
-Window::Window(int width, int height, const char* title)
+Window::Window(int width, int height)
 {
     if (g_num_window_alive == 0) {
         if (!glfwInit()) {
@@ -36,7 +36,7 @@ Window::Window(int width, int height, const char* title)
     // The window is visible only after calling Window::start()
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-    m_window = glfwCreateWindow(width, height, title, NULL, NULL);
+    m_window = glfwCreateWindow(width, height, "Untitled", NULL, NULL);
     if (!m_window) {
         throw std::runtime_error("Failed to create GLFW window");
     }
@@ -45,32 +45,19 @@ Window::Window(int width, int height, const char* title)
 Window::~Window()
 {
     if (m_destroyed) return;
- 
+
     // Destroy the viewer if any
     if (m_viewer) m_viewer.reset();
-    
+
     destroy();
 }
 
-std::pair<int, int> Window::get_size()
+std::pair<int, int> Window::size()
 {
     int width, height;
     glfwGetWindowSize(m_window, &width, &height);
     return {width, height};
 }
-
-int Window::get_key(int key) const { return glfwGetKey(m_window, key); }
-
-std::pair<double, double> Window::get_cursor_pos() const
-{
-    double pos_x, pos_y;
-    glfwGetCursorPos(m_window, &pos_x, &pos_y);
-    return {pos_x, pos_y};
-}
-
-int Window::get_cursor_mode() const { return glfwGetInputMode(m_window, GLFW_CURSOR); }
-
-void Window::set_cursor_mode(int value) { glfwSetInputMode(m_window, GLFW_CURSOR, value); }
 
 void Window::set_image(int width, int height, float* data_d)
 {
@@ -111,7 +98,7 @@ void Window::start0()
     setup_gl();
 
     // Init screenbuffers
-    auto [width, height] = get_size();
+    auto [width, height] = size();
     resize_screenbuffers(width, height);
 
     /* Window loop */
@@ -133,14 +120,14 @@ void Window::start0()
         // Update window title
         char title[256];
         if (!m_viewer) {
-            snprintf(title, sizeof(title), "Empty| FPS: %.1f", m_fps);
+            snprintf(title, sizeof(title), "Empty| %.1f FPS", m_fps);
         } else {
             switch (m_viewer->type) {
             case IMAGE:
-                snprintf(title, sizeof(title), "Image| FPS: %.1f", m_fps);
+                snprintf(title, sizeof(title), "Image| %.1f FPS", m_fps);
                 break;
             case GAUSSIAN_SPLATTING:
-                snprintf(title, sizeof(title), "Gaussian Splatting| FPS: %.1f", m_fps);
+                snprintf(title, sizeof(title), "Gaussian Splatting| %.1f FPS", m_fps);
                 break;
             default:
                 throw std::runtime_error("Unknown viewer type");

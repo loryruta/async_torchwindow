@@ -11,7 +11,8 @@ using namespace async_torchwindow;
 
 namespace
 {
-template <typename T> std::function<char*(size_t N)> resize_functional(Buffer& buffer)
+template <typename T>
+std::function<char*(size_t N)> resize_functional(Buffer& buffer)
 {
     return [&buffer](size_t N) -> char* {
         bool resized = buffer.resize(N * sizeof(T));
@@ -26,7 +27,7 @@ template <typename T> std::function<char*(size_t N)> resize_functional(Buffer& b
 
 GSViewer::GSViewer(Window* window) : Viewer(ViewerType::GAUSSIAN_SPLATTING), m_window(window)
 {
-    auto [width, height] = window->get_size();
+    auto [width, height] = window->size();
     m_camera.width = width;
     m_camera.height = height; // TODO resize fx and fy as well
     m_camera.update();
@@ -114,27 +115,30 @@ void GSViewer::update(float dt)
 
     /* Handle camera input */
     do {
-        if (glfwGetInputMode(m_window->handle(), GLFW_CURSOR) != GLFW_CURSOR_DISABLED) break;
+        GLFWwindow* w_handle = m_window->handle();
+
+        if (glfwGetInputMode(w_handle, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) break;
 
         bool do_update = false;
 
         // Handle camera movement
         float speed = k_camera_speed;
         glm::vec3 dir{};
-        if (m_window->get_key(GLFW_KEY_W)) dir += m_camera.forward();
-        if (m_window->get_key(GLFW_KEY_S)) dir -= m_camera.forward();
-        if (m_window->get_key(GLFW_KEY_A)) dir -= m_camera.right();
-        if (m_window->get_key(GLFW_KEY_D)) dir += m_camera.right();
-        if (m_window->get_key(GLFW_KEY_SPACE)) dir -= m_camera.up(); // Y negative
-        if (m_window->get_key(GLFW_KEY_LEFT_SHIFT)) dir += m_camera.up();
-        if (m_window->get_key(GLFW_KEY_LEFT_CONTROL)) speed *= 10.0f;
+        if (glfwGetKey(w_handle, GLFW_KEY_W) == GLFW_PRESS) dir += m_camera.forward();
+        if (glfwGetKey(w_handle, GLFW_KEY_S) == GLFW_PRESS) dir -= m_camera.forward();
+        if (glfwGetKey(w_handle, GLFW_KEY_A) == GLFW_PRESS) dir -= m_camera.right();
+        if (glfwGetKey(w_handle, GLFW_KEY_D) == GLFW_PRESS) dir += m_camera.right();
+        if (glfwGetKey(w_handle, GLFW_KEY_SPACE) == GLFW_PRESS) dir -= m_camera.up(); // Y negative
+        if (glfwGetKey(w_handle, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) dir += m_camera.up();
+        if (glfwGetKey(w_handle, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) speed *= 10.0f;
         if (dir != glm::vec3(0)) {
             m_camera.position += glm::normalize(dir) * speed * dt;
             do_update = true;
         }
 
         // Handle camera rotation
-        auto [cur_x, cur_y] = m_window->get_cursor_pos();
+        double cur_x, cur_y;
+        glfwGetCursorPos(w_handle, &cur_x, &cur_y);
         if (m_last_cursor_pos) {
             float cur_dx = (float) (cur_x - m_last_cursor_pos->x);
             float cur_dy = (float) (cur_y - m_last_cursor_pos->y);

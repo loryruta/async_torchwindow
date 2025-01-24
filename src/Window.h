@@ -40,20 +40,13 @@ private:
     double m_fps = 0;
 
 public:
-    Window(int width, int height, const char* title);
+    Window(int width, int height);
     ~Window();
 
     [[nodiscard]] GLFWwindow* handle() const { return m_window; }
 
-    std::pair<int, int> get_size();
-
-    [[nodiscard]] double get_fps() const { return m_fps; }
-
-    [[nodiscard]] int get_key(int key) const;
-    [[nodiscard]] std::pair<double, double> get_cursor_pos() const;
-
-    [[nodiscard]] int get_cursor_mode() const;
-    void set_cursor_mode(int mode);
+    [[nodiscard]] std::pair<int, int> size();
+    [[nodiscard]] double fps() const { return m_fps; }
 
     /// A function to let the user set an image to be displayed on the window.
     /// The image memory layout is expected to be (H, W, 4), and 32-bit floating per channel ranged [0, 1].
@@ -75,7 +68,7 @@ public:
 
     /// Start the window rendering/event loop.
     void start(bool blocking = true);
-    bool is_running() const;
+    [[nodiscard]] bool is_running() const;
 
     void destroy();
 
