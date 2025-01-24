@@ -41,7 +41,7 @@ void fill_image_creatively(int width, int height, float* image_data, float t)
 
 int main(int argc, char* argv[])
 {
-    Window window(WINDOW_W, WINDOW_H, "My window");
+    Window window(WINDOW_W, WINDOW_H);
 
     // Create a device image to display
     int image_w = WINDOW_W;
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     float* image_d;
     CHECK_CUDA(cudaMalloc(&image_d, image_w * image_h * 4 * sizeof(float)));
 
-    //window.set_image(image_w, image_h, image_d);
+    window.set_image(image_w, image_h, image_d);
 
     window.start(false /* blocking */);
 
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
         double t = glfwGetTime();
         fill_image_creatively(image_w, image_h, image_d, float(t));
-        CHECK_CUDA(cudaStreamSynchronize()); // Needed to avoid queuing too many operations on device
+        CHECK_CUDA(cudaStreamSynchronize(cudaStreamPerThread)); // Needed to avoid queuing too many operations on device
         // TODO modify the image on a separate CUDA stream?
     }
 
