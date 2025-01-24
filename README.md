@@ -3,7 +3,7 @@
 `async_torchwindow` is an alternative to [`torchwindow`](https://github.com/jbaron34/TorchWindow/)
 or to this [GitHub Gist](https://gist.github.com/victor-shepardson/3eb67c3664cde081a7e573376b1b0b54).
 
-Shortly, it opens a window that allows you to visualize an image tensor.
+Shortly, it opens a window that allows you to visualize an **image tensor** or a **Gaussian Splatting scene**.
 
 - **No download to host memory**
 
@@ -11,13 +11,10 @@ Shortly, it opens a window that allows you to visualize an image tensor.
 
 - **No GIL lock**
 
-  Differently from the cited alternatives, `async_torchwindow` allows to start the window asynchronously w.r.t. the caller thread (a Python thread). The callee thread is started from native code and thus won't interfere with the GIL lock, allowing Python to perform parallel tasks at full speed.
+  Differently from the cited alternatives, `async_torchwindow` allows to start the window asynchronously w.r.t. the caller thread (a Python thread). The visualization thread is started from native code and thus won't interfere with the GIL lock, allowing Python to perform parallel tasks at full speed.
 
-> ***NOTE:** This library was developed quickly (1 day) for personal use and, as such, lacks proper testing.
+> ***NOTE:** This library was developed quickly for personal use and, as such, lacks proper testing.
 > If found useful, issues and PRs are warmly welcomed.*
-
-Tested on:
-- Ubuntu 22.04
 
 ## Build and Install
 
