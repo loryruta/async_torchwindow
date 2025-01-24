@@ -90,12 +90,12 @@ window.start()
 (means3d, rotations, scales, opacity, shs) = load_gaussian_splatting_scene(scene_dir)
 background = torch.tensor([0, 0, 0], dtype=torch.float32)
 window.set_gaussian_splatting_scene(
-    background,
-    means3d,
-    shs,
-    opacity,
-    scales,
-    rotations
+    background, # (3,)
+    means3d,    # (P, 3)
+    shs,        # (P, M, 3), usually (P, 16, 3)
+    opacity,    # (P,)  , activated
+    scales,     # (P, 3), activated
+    rotations   # (P, 4), activated
 )
 
 try:
