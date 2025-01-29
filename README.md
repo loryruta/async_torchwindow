@@ -12,10 +12,10 @@ A PyTorch extension library to visualize an **Image tensor** or a **Gaussian Spl
   Many visualization libraries require image data to be on host before visualization.
   However, in many applications images are already device tensors and downloading such tensors to host memory introduces latency, hindering real-time visualization.
 
-- 🔓 **No GIL lock**
+- 🔓 **No GIL (Global Interpreter Lock)**
 
   Differently from the cited alternatives, `async_torchwindow` allows to start the window asynchronously w.r.t. the caller thread (Python).
-  The visualization thread is started from native code and thus don't interfere with the GIL lock, allowing Python to perform subsequent tasks at full speed.
+  The visualization thread is started from native code and thus don't interfere with the GIL (Global Interpreter Lock), allowing Python to perform subsequent tasks at full speed.
 
 > ***NOTE:** This library was developed quickly for personal use and, as such, lacks proper testing.
 > If found useful, issues and PRs are warmly welcomed.*
